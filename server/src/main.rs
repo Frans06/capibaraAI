@@ -1,6 +1,7 @@
 use app::*;
 use auth::Backend;
 use axum::Router;
+use db::db;
 use fileserv::file_and_error_handler;
 use leptos::*;
 use leptos_axum::{generate_route_list, LeptosRoutes};
@@ -8,7 +9,6 @@ use std::env;
 pub mod auth;
 pub mod fileserv;
 use axum_login::{
-    login_required,
     tower_sessions::{cookie::SameSite, Expiry, MemoryStore, SessionManagerLayer},
     AuthManagerLayerBuilder,
 };
@@ -17,7 +17,6 @@ use oauth2::{
 };
 use time::Duration;
 mod api;
-mod db;
 
 #[tokio::main]
 async fn main() {
@@ -57,7 +56,7 @@ async fn main() {
     //
     // This combines the session layer with our backend to establish the auth
     // service which will provide the auth session as a request extension.
-    let connection = db::db::establish_connection();
+    let connection = db::establish_connection();
     let backend = Backend::new(connection, client);
     let auth_layer = AuthManagerLayerBuilder::new(backend, session_layer).build();
     // Setting get_configuration(None) means we'll be using cargo-leptos's env values

@@ -744,6 +744,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "db"
+version = "0.1.0"
+dependencies = [
+ "axum-login",
+ "diesel",
+ "dotenvy",
+ "serde",
+]
+
+[[package]]
 name = "default-struct-builder"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3360,6 +3370,7 @@ dependencies = [
  "axum",
  "axum-login",
  "cuid",
+ "db",
  "diesel",
  "dotenvy",
  "leptos",

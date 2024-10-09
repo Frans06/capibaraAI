@@ -1,0 +1,15 @@
+[package]
+name = "db"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "db"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+diesel.workspace = true
+dotenvy.workspace = true
+axum-login.workspace = true

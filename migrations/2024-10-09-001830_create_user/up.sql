@@ -2,7 +2,7 @@
 CREATE TABLE "user"(
 	"id" VARCHAR NOT NULL PRIMARY KEY,
 	"email" VARCHAR NOT NULL,
-	"name" TEXT NOT NULL,
-	"access_token" TEXT NOT NULL
+	"name" VARCHAR,
+	"access_token" VARCHAR NOT NULL
 );
 

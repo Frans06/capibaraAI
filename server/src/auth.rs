@@ -1,40 +1,18 @@
-use std::error::Error;
-
-use crate::db::{
-    models::{NewUser, User},
-    schema::user,
-};
 use async_trait::async_trait;
 use axum::http::header::{AUTHORIZATION, USER_AGENT};
-use axum_login::{AuthUser, AuthnBackend, UserId};
+use axum_login::{AuthnBackend, UserId};
+use db::models::{NewUser, User};
 use diesel::{
     r2d2::{ConnectionManager, Pool},
-    result::Error::NotFound,
     ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use oauth2::{
-    basic::{
-        BasicClient, BasicErrorResponse, BasicRequestTokenError, BasicRevocationErrorResponse,
-        BasicTokenIntrospectionResponse, BasicTokenType,
-    },
+    basic::{BasicClient, BasicRequestTokenError},
     reqwest::{async_http_client, AsyncHttpClientError},
     url::Url,
-    AccessToken, AuthorizationCode, Client, CsrfToken, EmptyExtraTokenFields, ExtraTokenFields,
-    RefreshToken, Scope, StandardRevocableToken, TokenResponse, TokenType,
+    AuthorizationCode, CsrfToken, Scope, TokenResponse,
 };
-use serde::{Deserialize, Serialize};
-
-impl AuthUser for User {
-    type Id = String;
-
-    fn id(&self) -> Self::Id {
-        self.id.to_owned()
-    }
-
-    fn session_auth_hash(&self) -> &[u8] {
-        self.access_token.as_bytes()
-    }
-}
+use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Credentials {
@@ -45,8 +23,6 @@ pub struct Credentials {
 
 #[derive(Debug, Deserialize)]
 struct UserInfo {
-    picture: String,
-    id: String,
     email: String,
     name: String,
 }
@@ -97,7 +73,7 @@ impl AuthnBackend for Backend {
         &self,
         creds: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
-        use crate::db::schema::user;
+        use db::schema::user;
         // Ensure the CSRF state has not been tampered with.
 
         if creds.old_state.secret() != creds.new_state.secret() {
@@ -148,7 +124,7 @@ impl AuthnBackend for Backend {
     }
 
     async fn get_user(&self, user_id: &UserId<Self>) -> Result<Option<Self::User>, Self::Error> {
-        use crate::db::schema::user::dsl::*;
+        use db::schema::user::dsl::*;
         let pool = self.db.clone();
         let result = user
             .filter(id.eq(user_id))
