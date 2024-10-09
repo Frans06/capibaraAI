@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use crate::db::{
     models::{NewUser, User},
     schema::user,
@@ -7,6 +9,7 @@ use axum::http::header::{AUTHORIZATION, USER_AGENT};
 use axum_login::{AuthUser, AuthnBackend, UserId};
 use diesel::{
     r2d2::{ConnectionManager, Pool},
+    result::Error::NotFound,
     ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl, SelectableHelper,
 };
 use oauth2::{
@@ -22,10 +25,10 @@ use oauth2::{
 use serde::{Deserialize, Serialize};
 
 impl AuthUser for User {
-    type Id = i32;
+    type Id = String;
 
     fn id(&self) -> Self::Id {
-        self.id
+        self.id.to_owned()
     }
 
     fn session_auth_hash(&self) -> &[u8] {
@@ -43,9 +46,9 @@ pub struct Credentials {
 #[derive(Debug, Deserialize)]
 struct UserInfo {
     picture: String,
-    verified_email: bool,
     id: String,
     email: String,
+    name: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -77,6 +80,9 @@ impl Backend {
             .add_scope(Scope::new(
                 "https://www.googleapis.com/auth/userinfo.profile".to_string(),
             ))
+            .add_scope(Scope::new(
+                "https://www.googleapis.com/auth/userinfo.email".to_string(),
+            ))
             .url()
     }
 }
@@ -93,6 +99,7 @@ impl AuthnBackend for Backend {
     ) -> Result<Option<Self::User>, Self::Error> {
         use crate::db::schema::user;
         // Ensure the CSRF state has not been tampered with.
+
         if creds.old_state.secret() != creds.new_state.secret() {
             return Ok(None);
         };
@@ -106,11 +113,12 @@ impl AuthnBackend for Backend {
             .map_err(Self::Error::OAuth2)?;
 
         // Use access token to request user info.
+
         let mut url = Url::parse("https://www.googleapis.com/oauth2/v1/userinfo").unwrap();
         url.query_pairs_mut().append_pair("alt", "json");
 
         let user_info = reqwest::Client::new()
-            .get("http")
+            .get(url)
             .header(USER_AGENT.as_str(), "axum-login") // See: https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#user-agent-required
             .header(
                 AUTHORIZATION.as_str(),
@@ -122,9 +130,12 @@ impl AuthnBackend for Backend {
             .json::<UserInfo>()
             .await
             .map_err(Self::Error::Reqwest)?;
+
         let new_user = NewUser {
+            id: &cuid::cuid2(),
             email: &user_info.email,
             access_token: token_res.access_token().secret(),
+            name: &user_info.name,
         };
         let pool = self.db.clone();
         let created_user = diesel::insert_into(user::table)
@@ -132,6 +143,7 @@ impl AuthnBackend for Backend {
             .returning(User::as_returning())
             .get_result(&mut pool.get().unwrap())
             .map_err(Self::Error::Database)?;
+
         Ok(Some(created_user))
     }
 

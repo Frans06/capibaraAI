@@ -5,6 +5,7 @@ use leptos_meta::*;
 use leptos_router::*;
 
 pub mod error_template;
+pub mod pages;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -26,7 +27,7 @@ pub fn App() -> impl IntoView {
             <main>
                 <Routes>
                     <Route path="" view=HomePage/>
-                    <Route path="login" view=HomePage/>
+                    <Route path="login" view=pages::login::LoginPage/>
                     <Route path="oauth" view=HomePage/>
                 </Routes>
             </main>

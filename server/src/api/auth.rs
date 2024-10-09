@@ -1,5 +1,4 @@
 use axum::{
-    extract::Query,
     http::StatusCode,
     response::{IntoResponse, Redirect},
     routing::{get, post},
@@ -7,8 +6,7 @@ use axum::{
 };
 use axum_login::tower_sessions::Session;
 use leptos::LeptosOptions;
-use leptos_axum::LeptosRoutes;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub const NEXT_URL_KEY: &str = "auth.next-url";
 
@@ -21,11 +19,18 @@ pub struct NextUrl {
 
 pub fn router() -> Router<LeptosOptions> {
     Router::new()
-        .route("/login", post(self::post::login))
-        .route("/logout", get(self::get::logout))
+        .route("/auth/login", get(self::get::login))
+        .route("/auth/logout", get(self::get::logout))
 }
 
-mod post {
+#[derive(Serialize)]
+struct UrlResponse {
+    url: String,
+}
+
+mod get {
+
+    use axum::Json;
 
     use crate::{api::oauth::CSRF_STATE_KEY, auth::AuthSession};
 
@@ -35,7 +40,7 @@ mod post {
         auth_session: AuthSession,
         session: Session,
         Form(NextUrl { next }): Form<NextUrl>,
-    ) -> impl IntoResponse {
+    ) -> Json<UrlResponse> {
         let (auth_url, csrf_state) = auth_session.backend.authorize_url();
 
         session
@@ -47,15 +52,11 @@ mod post {
             .insert(NEXT_URL_KEY, next)
             .await
             .expect("Serialization should not fail.");
-
-        Redirect::to(auth_url.as_str()).into_response()
+        let response = UrlResponse {
+            url: auth_url.as_str().to_owned(),
+        };
+        Json(response)
     }
-}
-
-mod get {
-    use crate::auth::AuthSession;
-
-    use super::*;
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
         match auth_session.logout().await {

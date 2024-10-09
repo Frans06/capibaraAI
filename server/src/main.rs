@@ -37,7 +37,8 @@ async fn main() {
     let token_url = TokenUrl::new("https://oauth2.googleapis.com/token".to_string()).unwrap();
     let client = BasicClient::new(client_id, Some(client_secret), auth_url, Some(token_url))
         .set_redirect_uri(
-            RedirectUrl::new("http://localhost:8080".to_string()).expect("Invalid redirect URL"),
+            RedirectUrl::new("http://localhost:3000/oauth/callback".to_string())
+                .expect("Invalid redirect URL"),
         )
         // Google supports OAuth 2.0 Token Revocation (RFC-7009)
         .set_revocation_uri(
@@ -74,6 +75,7 @@ async fn main() {
         .leptos_routes(&leptos_options, routes, App)
         .merge(api::auth::router())
         .merge(api::oauth::router())
+        .layer(auth_layer)
         .fallback(file_and_error_handler)
         .with_state(leptos_options);
 

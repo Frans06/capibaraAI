@@ -5,7 +5,7 @@ use diesel::prelude::*;
 #[diesel(table_name = crate::db::schema::user)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct User {
-    pub id: i32,
+    pub id: String,
     pub email: String,
     pub name: Option<String>,
     pub access_token: String,
@@ -14,6 +14,8 @@ pub struct User {
 #[derive(Insertable)]
 #[diesel(table_name = user)]
 pub struct NewUser<'a> {
+    pub id: &'a str,
     pub email: &'a str,
     pub access_token: &'a str,
+    pub name: &'a str,
 }
